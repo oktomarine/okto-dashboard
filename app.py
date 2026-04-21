@@ -71,19 +71,9 @@ def get_gc():
 @st.cache_data(ttl=60)
 def load_data():
     sh = get_gc().open(st.secrets["sheet_name"])
-    sp = sh.spreadsheet_id
-    batch = get_gc().http_client.spreadsheets_values_batch_get(
-        sp, ranges=["1_Config","2_MarketRates","5_Fixtures","6_RatesHistory","7_BunkerHistory"]
-    )
-    raw = {}
-    for r in batch.get("valueRanges",[]):
-        name = r["range"].split("!")[0].strip("'").strip()
-        raw[name] = r.get("values",[])
 
     def key(name):
-        for k in raw:
-            if name.lower() in k.lower(): return raw[k]
-        return []
+        return sh.worksheet(name).get_all_values()
 
     cfg = {r[0]:r[1] for r in key("1_Config")[1:] if len(r)>=2}
 
@@ -107,7 +97,11 @@ def load_data():
         df=pd.DataFrame(padded,columns=clean)
         return df[df.apply(lambda r:any(str(v).strip() for v in r),axis=1)].reset_index(drop=True)
 
-    return cfg, key("2_MarketRates"), to_df(key("5_Fixtures")), to_df(key("6_RatesHistory")), to_df(key("7_BunkerHistory"))
+    mr  = key("2_MarketRates")
+    fx  = to_df(key("5_Fixtures"))
+    r6  = to_df(key("6_RatesHistory"))
+    b7  = to_df(key("7_BunkerHistory"))
+    return cfg, mr, fx, r6, b7
 
 def parse_mr(raw):
     g={}; cur=None; sk=False
