@@ -79,14 +79,44 @@ def load_all():
     # 2_MarketRates
     mr_raw = sh.worksheet("2_MarketRates").get_all_values()
 
+    def ws_to_df(ws):
+        rows = ws.get_all_values()
+        if not rows or len(rows) < 2:
+            return pd.DataFrame()
+        # Find header row — first row with more than 1 non-empty cell
+        header_idx = 0
+        for i, row in enumerate(rows):
+            non_empty = [c for c in row if str(c).strip()]
+            if len(non_empty) > 1:
+                header_idx = i
+                break
+        headers = rows[header_idx]
+        data = rows[header_idx + 1:]
+        seen = {}
+        clean_headers = []
+        for h in headers:
+            h = str(h).strip()
+            if not h:
+                h = "_col"
+            if h in seen:
+                seen[h] += 1
+                h = f"{h}_{seen[h]}"
+            else:
+                seen[h] = 0
+            clean_headers.append(h)
+        df = pd.DataFrame(data, columns=clean_headers)
+        # Drop fully empty rows
+        df = df[df.apply(lambda r: any(str(v).strip() for v in r), axis=1)]
+        return df.reset_index(drop=True)
+
     # 5_Fixtures
-    fx_df = pd.DataFrame(sh.worksheet("5_Fixtures").get_all_records())
+    fx_df = ws_to_df(sh.worksheet("5_Fixtures"))
 
     # 6_RatesHistory
-    r6_df = pd.DataFrame(sh.worksheet("6_RatesHistory").get_all_records())
+    r6_df = ws_to_df(sh.worksheet("6_RatesHistory"))
 
     # 7_BunkerHistory
-    b7_df = pd.DataFrame(sh.worksheet("7_BunkerHistory").get_all_records())
+    b7_df = ws_to_df(sh.worksheet("7_BunkerHistory"))
 
     return cfg, mr_raw, fx_df, r6_df, b7_df
 
