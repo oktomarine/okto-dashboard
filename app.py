@@ -66,7 +66,7 @@ div[data-testid="stTabs"] button { font-family:'Barlow Condensed',sans-serif !im
 @st.cache_data(ttl=300)
 def load_all():
     creds = Credentials.from_service_account_info(
-        json.loads(st.secrets["gcp_service_account"]),
+        dict(st.secrets["gcp_service_account"]),
         scopes=["https://spreadsheets.google.com/feeds",
                 "https://www.googleapis.com/auth/drive"]
     )
