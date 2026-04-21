@@ -138,25 +138,41 @@ def get_pub_ws():
     sh=get_sh()
     try: return sh.worksheet(SHEET_NAME)
     except:
-        ws=sh.add_worksheet(SHEET_NAME,rows=500,cols=2)
-        ws.append_row(["id","snapshot"])
+        ws=sh.add_worksheet(SHEET_NAME,rows=500,cols=3)
+        ws.append_row(["id","meta","fixtures"])
         return ws
+
+def compress_fixtures(fixtures):
+    return [[f.get("type",""),f.get("cargoType",""),f.get("charterer",""),
+             f.get("vessel",""),f.get("qty",""),f.get("cargo",""),
+             f.get("loadDisch",""),f.get("date",""),f.get("rate","")] for f in fixtures]
+
+def decompress_fixtures(data):
+    keys=["type","cargoType","charterer","vessel","qty","cargo","loadDisch","date","rate"]
+    return [{keys[i]:row[i] if i<len(row) else "" for i in range(len(keys))} for row in data]
 
 def save_pub(rid, snapshot):
     ws=get_pub_ws()
     rows=ws.get_all_values()
-    s=json.dumps(snapshot,ensure_ascii=False)
+    # Split into meta + fixtures
+    fx = snapshot.pop("fixtures",[])
+    meta_s = json.dumps(snapshot, ensure_ascii=False)
+    fx_s = json.dumps(compress_fixtures(fx), ensure_ascii=False)
     for i,row in enumerate(rows):
         if row and row[0]==rid:
-            ws.update(f"A{i+1}:B{i+1}",[[rid,s]])
+            ws.update(f"A{i+1}:C{i+1}",[[rid,meta_s,fx_s]])
             return
-    ws.append_row([rid,s])
+    ws.append_row([rid,meta_s,fx_s])
 
 def load_pub(rid):
     ws=get_pub_ws()
     for row in ws.get_all_values():
         if row and row[0]==rid:
-            try: return json.loads(row[1])
+            try:
+                snap=json.loads(row[1])
+                fx=decompress_fixtures(json.loads(row[2])) if len(row)>2 and row[2] else []
+                snap["fixtures"]=fx
+                return snap
             except: return None
     return None
 
@@ -191,8 +207,16 @@ if report_id:
     if not snap:
         st.error("Rapor bulunamadı.")
         st.stop()
+    # Load rates/bunker fresh (always available, never changes for past weeks)
+    try:
+        _cfg,_mr,_fx,_r6,_b7 = load_sheets_data()
+        _rates = build_rates(_r6)
+        _bunker = build_bunker(_b7)
+    except:
+        _rates = {"dates":[],"USG":{},"ARA":{},"AG":{},"FEAST":{}}
+        _bunker = {"VLSFO":[],"MGO":[],"IFO 380":[]}
     render(snap["week_label"],snap["report_date"],snap.get("period",""),
-           snap["rate_tables_html"],{"rates":snap["rates"],"bunker":snap["bunker"],"fixtures":snap["fixtures"]})
+           snap["rate_tables_html"],{"rates":_rates,"bunker":_bunker,"fixtures":snap["fixtures"]})
     st.stop()
 
 # ══════════════════════════════════════════════════════════════
@@ -252,11 +276,12 @@ with atab1:
     if pub:
         existing=[r for r in list_pubs() if r["week_label"]==wl]
         rid=existing[0]["id"] if existing else uuid.uuid4().hex[:8]
+        # Sadece küçük veriyi kaydet — rates/bunker history Sheets'te zaten var
         snap={
             "week_label":wl,"report_date":rd,"period":period,
             "created_at":datetime.now().strftime("%Y-%m-%d %H:%M"),
             "rate_tables_html":rt,
-            "rates":rates,"bunker":bunker,"fixtures":fixtures
+            "fixtures":fixtures
         }
         save_pub(rid,snap)
         link=f"{BASE_URL}?id={rid}"
