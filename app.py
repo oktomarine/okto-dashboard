@@ -374,8 +374,7 @@ with tab3:
               <td>{vessel}</td>
               <td>{r.get("Quantity","")}</td>
               <td class="td-bold">{r.get("Cargo","")}</td>
-              <td>{r.get("Load_Port","")}</td>
-              <td>{r.get("Discharge_Port","")}</td>
+              <td>{r.get("Load_Disch","")}</td>
               <td>{r.get("Laycan","")}</td>
               <td class="{rate_cls}">{rate}</td>
             </tr>"""
@@ -385,7 +384,7 @@ with tab3:
         <table class="fix-tbl">
           <thead><tr>
             <th>Type</th><th>Cargo Type</th><th>Charterer</th><th>Vessel</th>
-            <th>Quantity</th><th>Cargo</th><th>Load Port</th><th>Discharge Port</th>
+            <th>Quantity</th><th>Cargo</th><th>Load – Disch Ports</th>
             <th>Laycan</th><th>Rate</th>
           </tr></thead>
           <tbody>{rows_html}</tbody>
