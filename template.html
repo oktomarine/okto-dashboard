@@ -444,5 +444,40 @@ window.addEventListener('DOMContentLoaded',()=>{
   }, 100);
 });
 </script>
+
+<style>
+[data-testid="stHostedWithStreamlit"],
+[class*="viewerBadge"],
+#streamlit-badge-overflow-button,
+iframe[src*="badge"],
+a[href*="streamlit.io"] {
+    display:none!important;
+    visibility:hidden!important;
+    opacity:0!important;
+    pointer-events:none!important;
+}
+</style>
+<script>
+(function killBadge() {
+    var selectors = [
+        '[data-testid="stHostedWithStreamlit"]',
+        '[class*="viewerBadge"]',
+        '#streamlit-badge-overflow-button',
+        'iframe[src*="badge"]',
+        'a[href*="streamlit.io"]'
+    ];
+    function remove() {
+        selectors.forEach(function(sel) {
+            document.querySelectorAll(sel).forEach(function(el) {
+                el.style.cssText = 'display:none!important';
+                el.remove();
+            });
+        });
+    }
+    remove();
+    setInterval(remove, 500);
+    new MutationObserver(remove).observe(document.body, {childList:true, subtree:true});
+})();
+</script>
 </body>
 </html>
